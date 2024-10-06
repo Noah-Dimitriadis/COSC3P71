@@ -1,89 +1,112 @@
-import easygui as gui
+from GameBoard import GameBoard
+from queue import PriorityQueue
+from copy import deepcopy
 
-class Cell:
-    def __init__(self, value:str, x:int, y:int) -> None:
-        self.value = value
-        self.x = x
-        self.y = y
+def generate_moves(board:GameBoard) -> list[GameBoard]:
+    empty_cell = board.find_empty()
+    move_coordinates = [
+        empty_cell.row,
+        empty_cell.col + 1,
+        empty_cell.row,
+        empty_cell.col - 1,
+        empty_cell.row - 1,
+        empty_cell.col,
+        empty_cell.row + 1,
+        empty_cell.col
+    ]
 
-class GameBoard:
-    def __init__(self) -> None:
-        lines = self.read_file()
-        self.size = int(lines[0][0])
-        self.board = []
-        for row in range(self.size):
-            temp = []
-            for col in range(self.size):
-                temp.append(Cell(lines[row+1][col], row, col))
-            self.board.append(temp)
+    all_moves = []
 
-    def read_file(self):
-        file = open(gui.fileopenbox()).readlines()
-        return [line.replace(" ", "").strip() for line in file]
-    
-    def print_board(self):
-        for row in self.board:
-            for cell in row:
-                print(cell.value, end="")
-            print()
+    for i in range(0, 8, 2):
+        copy = deepcopy(board)
 
-    def find_empty(self) -> Cell:
-        for row in self.board:
-            for cell in row:
-                if cell.value == 'X': return cell
+        row = move_coordinates[i]
+        col = move_coordinates[i+1]
+        if row < copy.size and row >= 0 and col < copy.size and col >= 0:     # if move is legal
+            temp = copy.board[row][col]
+            copy.board[row][col] = copy.board[empty_cell.row][empty_cell.col]
+            copy.board[empty_cell.row][empty_cell.col] = temp
+            copy.parent = board
+            copy.depth = board.depth + 1
+            all_moves.append(copy)
+           
+    return all_moves
 
-    def generate_moves(self):
-        empty_cell = self.find_empty()
-        # move up down left right
-        # determine cells to be swapped with empty cells values
-        # pass in copies of the board and create dummy cells to do so
+def is_solved(board:GameBoard) -> bool:
+    count = 1           # index 1 has the number 1
+    for row in board.board:
+        for cell in row:
+            if cell.value == 'X':
+                if count == 9: return True
+                else: return False
+            if int(cell.value) != count: return False
+            count += 1
+    return True
 
-        pass
-
-    def move(self, cell1:Cell, cell2:Cell):
-        if cell1.value == 'X' or cell2.value == 'X':
-            temp = cell1.value
-            cell1.value = cell2.value
-            cell2.value = temp
-        else:
-            print('invalid move')
-
-    def is_solved(self) -> bool:
-        count = 1           # index 1 has the number 1
-        for row in self.board:
-            for cell in row:
-                if cell.value == 'X':
-                    if count == 9: return True
-                    else: return False
-                if int(cell.value) != count: return False
+def heuristic_class_1(board:GameBoard) -> int:
+    # Heuristic from class -> # of tiles in the wrong spot
+    current = 1
+    count = 0
+    for row in board.board:
+        for cell in row:
+            if cell.value == 'X':
+                pass
+            elif int(cell.value) != current: 
                 count += 1
-        return True
-
-    def heuristic_class_1(self) -> int:
-        # Heuristic from class -> # of tiles in the wrong spot
-        current = 1
-        count = 0
-        for row in self.board:
-            for cell in row:
-                if cell.value == 'X':
-                    pass
-                elif int(cell.value) != current: 
-                    count += 1
-                current += 1
-        return count
+            current += 1
+    return count
     
-    def heuristic_class_2(self) -> int:
-        # Heuristic from class -> manhattan distance
+def heuristic_class_2(self) -> int:
+    # Heuristic from class -> manhattan distance
 
-        
+    
 
-        pass
+    pass
 
-    def heuristic_self(self) -> int:
-        # Heuristic not covered in class TBD
+def heuristic_self(self) -> int:
+    # Heuristic not covered in class TBD
 
-        pass
+    pass
+
+def a_star(initial_board:GameBoard) -> list[GameBoard]:
+    path = []
+    pq = PriorityQueue()
+
+    pq.put((heuristic_class_1(initial_board), initial_board))
+    current = None
+    while pq:
+        current = pq.get()
+        current[1].print_board()
+        print(f'Current depth: {current[1].depth}')
+        if current[1].depth == 5: break
+        if is_solved(current[1]): break
+        current_moves = generate_moves(current[1])
+        for move in current_moves:
+            
+            heuristic = move.depth + heuristic_class_1(move)
+            move.heuristic = heuristic
+
+            pq.put((heuristic, move))
+
+    curr = current[1]
+    while curr.parent is not None:
+        path.append(curr)
+        curr = curr.parent
+    
+    path.append(curr)
+    return path
 
 if __name__ == "__main__":
     gb = GameBoard()
-    gb.print_board()
+    
+    # for move in generate_moves(gb):
+    #     move.print_board()
+
+    path = a_star(gb)
+
+    # count = 0
+    # for p in path:
+    #     if count == 25: break
+    #     p.print_board()
+    #     print()
+    #     count += 1
