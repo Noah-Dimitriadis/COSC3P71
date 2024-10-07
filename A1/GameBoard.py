@@ -10,7 +10,6 @@ class GameBoard:
     def __init__(self) -> None:
         self.depth = 0
         self.heuristic = 0
-        self.weight = 0
         lines = self.read_file()
         self.size = int(lines[0][0])
         self.board = []
@@ -31,10 +30,16 @@ class GameBoard:
                 print(cell.value, end="")
             print()
 
-    def find_empty(self) -> Cell:
-        for row in self.board:
-            for cell in row:
-                if cell.value == 'X': return cell
-
     def __lt__(self, other):
         return self.depth < other.depth
+    
+    def __eq__(self, other) -> bool:
+        row = 0
+        col = 0
+        for i in self.board:
+            for cell in i:
+                if cell.value != other.board[row][col].value: return False
+                col += 1
+            row += 1
+            col = 0
+        return True
