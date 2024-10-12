@@ -36,10 +36,10 @@ def generate_moves(board:GameBoard) -> list[GameBoard]:
             temp = copy.board[row][col].value
             copy.board[row][col].value = copy.board[empty_cell.row][empty_cell.col].value
             copy.board[empty_cell.row][empty_cell.col].value = temp
-
-            copy.parent = board
-            copy.depth = board.depth + 1
-            all_moves.append(copy)
+            if board.parent is None or copy != board.parent:
+                copy.parent = board
+                copy.depth = board.depth + 1
+                all_moves.append(copy)
            
     return all_moves
 
@@ -118,33 +118,36 @@ def a_star(initial_board:GameBoard) -> list[GameBoard]:
     path.append(curr)
     return path
 
-def DFS(starting_position:GameBoard) -> list[GameBoard]:
+def DFS(starting_position:GameBoard, max:int) -> list[GameBoard]:
     solved = False
     path = []
-    open = []
     closed = []
+    open = []
 
     current_state:GameBoard
     
-    open.append(starting_position)
-    while open:
-        current_state = open.pop(0)
-        if is_solved(current_state): 
-            solved = True
-            break
-        if current_state.depth == 20: break
+    open.insert(0, starting_position)
+    for i in range(0,max):
+        print(f'Current depth is {i}')
+        if solved:  break
+        while open:
+            current_state = open.pop(0)
+            if is_solved(current_state): 
+                solved = True
+                break
+            if current_state.depth > i+2: break
 
-        moves = generate_moves(current_state)
-        for move in moves:
-            duplicate = False
-            for closed_move in closed:
-                if move == closed_move:
-                    duplicate = True
-            if not duplicate:
-                open.append(move)
+            moves = generate_moves(current_state)
+            for move in moves:
+                duplicate = False
+                for closed_move in closed:
+                    if move == closed_move:
+                        duplicate = True
+                if not duplicate:
+                    open.append(move)
+            
+            closed.append(current_state)
         
-        closed.append(current_state)
-
     if not solved: return []
     while current_state.parent is not None:
         path.append(current_state)
@@ -156,14 +159,17 @@ def DFS(starting_position:GameBoard) -> list[GameBoard]:
 if __name__ == "__main__":
     gb = GameBoard()
     start =  time.time()
-    p = DFS(gb)
+    p = DFS(gb, 50)
     end = time.time()
     total = end-start
-    p.reverse()
-    print('solution found. printing path:')
+    if len(p) > 0:
+        p.reverse()
+        print('solution found. printing path:')
     for step in p:
         step.print_board()
+        print(step.depth)
         print()
-    print(f'Solution in {len(p) - 1} moves')        # minus initial state
+    if len(p) > 0:
+        print(f'Solution in {max(step.depth for step in p)} moves')        # minus initial state
 
-    print(total)
+    print(f'It took {total} seconds to solve')
