@@ -43,3 +43,14 @@ class GameBoard:
             row += 1
             col = 0
         return True
+    
+    def __ne__(self, other):
+        row = 0
+        col = 0
+        for i in self.board:
+            for cell in i:
+                if cell.value != other.board[row][col].value: return True
+                col += 1
+            row += 1
+            col = 0
+        return False
