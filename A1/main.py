@@ -4,11 +4,10 @@ from copy import deepcopy
 import time
 
 '''
-TODO Better naming for open, closed and current nodes also just all around naming is atrocious 
-
-TODO Create the DFS with the current A* method and then reverse engineer A* from it once it works.
-        Need to make sure our traversal and depth limiter are working correctly before we move on to 
-        selecting with the PQ -> it mostly is but there is an infinite loop bug/this is taking so fucking long
+TODO remove gameboard class dependency
+TODO optimise pq insertion in a_star
+TODO optimise move generation and compare with closed list in generate function?
+TODO implement other heurstics and create heuristic selection functionality
 
 '''
 
