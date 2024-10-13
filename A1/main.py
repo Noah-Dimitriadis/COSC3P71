@@ -72,50 +72,51 @@ def heuristic_class_1(board:GameBoard) -> int:
             current += 1
     return count
     
-def heuristic_class_2(self) -> int:
+def heuristic_class_2() -> int:
     # Heuristic from class -> manhattan distance
 
     
 
     pass
 
-def heuristic_self(self) -> int:
+def heuristic_self() -> int:
     # Heuristic not covered in class TBD
 
     pass
 
-def a_star(initial_board:GameBoard) -> list[GameBoard]:
+def a_star(starting_position:GameBoard) -> list[GameBoard]:
+    solved = False
     path = []
-    open_states = PriorityQueue()
-    closed_states = []
+    open = PriorityQueue()
+    closed = []
 
-    open_states.put((heuristic_class_1(initial_board), initial_board))
-    current = None
-    while open_states:
-        current = open_states.get()         #TODO grab the actual board from the tuple...
-        # ... we dont actually use any other data from the tuple other then the board
-        
-        current[1].print_board()
+    open.put((heuristic_class_1(starting_position), starting_position))
+    current_state = None
+    while open:
+        current_state = open.get()[1]
 
-        # TODO need to add check for previous states to prevent oscillation
+        if is_solved(current_state): 
+            solved = True
+            break
 
-        print(f'Current depth: {current[1].depth}')
-        if current[1].depth == 5: break
-        if is_solved(current[1]): break
-        current_moves = generate_moves(current[1])
-        for move in current_moves:
-            # TODO Check if move is a closed state
-            heuristic = move.depth + heuristic_class_1(move)
-            move.heuristic = heuristic
+        if current_state.depth == 50: break
+        moves = generate_moves(current_state)
+        for move in moves:
+            duplicate = False
+            for closed_move in closed:
+                if move == closed_move:
+                    duplicate = True
+            if not duplicate:
+                move.heuristic = current_state.depth + heuristic_class_1(move)
+                open.put((move.heuristic, move))
+        closed.append(current_state)
 
-            open_states.put((heuristic, move))
+    if not solved: return []
+    while current_state.parent is not None:
+        path.append(current_state)
+        current_state = current_state.parent
+    path.append(starting_position)
 
-    curr = current[1]
-    while curr.parent is not None:
-        path.append(curr)
-        curr = curr.parent
-    
-    path.append(curr)
     return path
 
 def DFS(starting_position:GameBoard, max:int) -> list[GameBoard]:
@@ -129,7 +130,7 @@ def DFS(starting_position:GameBoard, max:int) -> list[GameBoard]:
     open.insert(0, starting_position)
     for i in range(0,max):
         print(f'Current depth is {i}')
-        if solved:  break
+        if solved: break
         while open:
             current_state = open.pop(0)
             if is_solved(current_state): 
@@ -153,13 +154,13 @@ def DFS(starting_position:GameBoard, max:int) -> list[GameBoard]:
         path.append(current_state)
         current_state = current_state.parent
     path.append(starting_position)
-    return path
-    
+    return pat
+
 
 if __name__ == "__main__":
     gb = GameBoard()
     start =  time.time()
-    p = DFS(gb, 50)
+    p = a_star(gb)
     end = time.time()
     total = end-start
     if len(p) > 0:
