@@ -13,7 +13,7 @@ TODO implement other heurstics and create heuristic selection functionality
 '''
 
 def generate_moves(position:list) -> list[list]:
-    position[4].append(position[3])
+    # position[4].append(position[3])
     empty_cell = find_empty(position)
     move_coordinates = [
         empty_cell.row,
@@ -33,13 +33,15 @@ def generate_moves(position:list) -> list[list]:
 
         row = move_coordinates[i]
         col = move_coordinates[i+1]
+
         if row < copy[0] and row >= 0 and col < copy[0] and col >= 0:     # if move is legal
             temp = copy[3][row][col].value
             copy[3][row][col].value = copy[3][empty_cell.row][empty_cell.col].value
             copy[3][empty_cell.row][empty_cell.col].value = temp
-            if not position[4] or copy not in position[4]:
-                copy[4] = position[4]
+            
+            if not position[4] or copy[3] not in position[4]:   
                 copy[1] = position[1] + 1
+                # copy[4] = position[4]
                 all_moves.append(copy)
     return all_moves
 
@@ -78,9 +80,6 @@ def heuristic_class_1(position:list) -> int:
 def heuristic_class_2() -> int:
     # Heuristic from class -> manhattan distance
 
-
-    
-
     pass
 
 def heuristic_self() -> int:
@@ -95,7 +94,7 @@ def a_star(starting_position:list) -> list[list]:
     closed = []
     heuristic = heuristic_class_1(starting_position)
     open.put((heuristic, starting_position))
-    current_state = None
+
     while open:
         current_state = open.get()[1]
         solved = is_solved(current_state)
@@ -114,10 +113,9 @@ def a_star(starting_position:list) -> list[list]:
         closed.append(current_state[3])
 
     if not solved: return []
-
     path = current_state[4]
-    path.append(current_state[3])
-        
+    # path.append(current_state[3])
+
     return path
 
 def DFS(starting_position:list, max:int) -> list[list]:
@@ -179,11 +177,7 @@ def read_file():
     return [line.replace(" ", "").strip() for line in file]
 
 def print_board(position:list):
-    board = position[3]     # the board itself is stored at this index
-    for row in board:
-        for cell in row:
-            print(cell.value, end="")
-        print()
+    print_move(position[3]) # the board itself is stored at this index
     print(f'Size: {position[0]}|Depth: {position[1]}|Heuristic: {position[2]}')
         
 def print_move(move:list):
@@ -195,10 +189,13 @@ def print_move(move:list):
 
 if __name__ == "__main__":
     gb = start_game()
+
     start =  time.time()
     p = a_star(gb)
     end = time.time()
+
     total = end-start
     for move in p:
         print_move(move)
-    print(f'Solved the puzzle in {total} seconds')
+
+    print(f'Solved the puzzle in {total} seconds with {len(p)} moves')
