@@ -1,18 +1,20 @@
-from GameBoard import GameBoard,Cell
+from Cell import Cell
+import easygui as gui
 from queue import PriorityQueue
 from copy import deepcopy
 import time
 
 '''
-TODO remove gameboard class dependency
-TODO optimise pq insertion in a_star
 TODO optimise move generation and compare with closed list in generate function?
+
+
 TODO implement other heurstics and create heuristic selection functionality
 
 '''
 
-def generate_moves(board:GameBoard) -> list[GameBoard]:
-    empty_cell = find_empty(board)
+def generate_moves(position:list) -> list[list]:
+    position[4].append(position[3])
+    empty_cell = find_empty(position)
     move_coordinates = [
         empty_cell.row,
         empty_cell.col + 1,
@@ -27,24 +29,24 @@ def generate_moves(board:GameBoard) -> list[GameBoard]:
     all_moves = []
 
     for i in range(0, 8, 2):
-        copy = deepcopy(board)
+        copy = deepcopy(position)
 
         row = move_coordinates[i]
         col = move_coordinates[i+1]
-        if row < copy.size and row >= 0 and col < copy.size and col >= 0:     # if move is legal
-            temp = copy.board[row][col].value
-            copy.board[row][col].value = copy.board[empty_cell.row][empty_cell.col].value
-            copy.board[empty_cell.row][empty_cell.col].value = temp
-            if board.parent is None or copy != board.parent:
-                copy.parent = board
-                copy.depth = board.depth + 1
+        if row < copy[0] and row >= 0 and col < copy[0] and col >= 0:     # if move is legal
+            temp = copy[3][row][col].value
+            copy[3][row][col].value = copy[3][empty_cell.row][empty_cell.col].value
+            copy[3][empty_cell.row][empty_cell.col].value = temp
+            if not position[4] or copy not in position[4]:
+                copy[4] = position[4]
+                copy[1] = position[1] + 1
                 all_moves.append(copy)
-           
     return all_moves
 
-def is_solved(board:GameBoard) -> bool:
+def is_solved(position:list) -> bool:
+    board = position[3] 
     count = 1           # index 1 has the number 1
-    for row in board.board:
+    for row in board:
         for cell in row:
             if cell.value == 'X':
                 if count == 9: return True
@@ -53,16 +55,18 @@ def is_solved(board:GameBoard) -> bool:
             count += 1
     return True
 
-def find_empty(board:GameBoard) -> Cell:
-        for row in board.board:
+def find_empty(position:list) -> Cell:
+        board = position[3]
+        for row in board:
             for cell in row:
                 if cell.value == 'X': return cell
 
-def heuristic_class_1(board:GameBoard) -> int:
+def heuristic_class_1(position:list) -> int:
     # Heuristic from class -> # of tiles in the wrong spot
+    board = position[3]         # this is where the current game board is located
     current = 1
     count = 0
-    for row in board.board:
+    for row in board:
         for cell in row:
             if cell.value == 'X':
                 pass
@@ -74,6 +78,7 @@ def heuristic_class_1(board:GameBoard) -> int:
 def heuristic_class_2() -> int:
     # Heuristic from class -> manhattan distance
 
+
     
 
     pass
@@ -83,48 +88,45 @@ def heuristic_self() -> int:
 
     pass
 
-def a_star(starting_position:GameBoard) -> list[GameBoard]:
+def a_star(starting_position:list) -> list[list]:
     solved = False
     path = []
     open = PriorityQueue()
     closed = []
-
-    open.put((heuristic_class_1(starting_position), starting_position))
+    heuristic = heuristic_class_1(starting_position)
+    open.put((heuristic, starting_position))
     current_state = None
     while open:
         current_state = open.get()[1]
-
-        if is_solved(current_state): 
-            solved = True
-            break
-
-        if current_state.depth == 50: break
+        solved = is_solved(current_state)
+        current_depth = current_state[1]
+        if solved: break
+        if current_depth == 50: break
         moves = generate_moves(current_state)
+        
         for move in moves:
-            duplicate = False
-            for closed_move in closed:
-                if move == closed_move:
-                    duplicate = True
-            if not duplicate:
-                move.heuristic = current_state.depth + heuristic_class_1(move)
-                open.put((move.heuristic, move))
-        closed.append(current_state)
+            if move[3] not in closed:
+                heuristic = current_depth + heuristic_class_1(move)
+                move[2] = heuristic
+                open.put((heuristic, move))
+        if not solved:
+            current_state[4] = []
+        closed.append(current_state[3])
 
     if not solved: return []
-    while current_state.parent is not None:
-        path.append(current_state)
-        current_state = current_state.parent
-    path.append(starting_position)
 
+    path = current_state[4]
+    path.append(current_state[3])
+        
     return path
 
-def DFS(starting_position:GameBoard, max:int) -> list[GameBoard]:
+def DFS(starting_position:list, max:int) -> list[list]:
     solved = False
     path = []
     closed = []
     open = []
 
-    current_state:GameBoard
+    current_state = []
     
     open.insert(0, starting_position)
     for i in range(0,max):
@@ -153,23 +155,50 @@ def DFS(starting_position:GameBoard, max:int) -> list[GameBoard]:
         path.append(current_state)
         current_state = current_state.parent
     path.append(starting_position)
-    return pat
+    return path
 
+def start_game() -> list:
+    starting_position = [0,0,0,[],[]]         # size, depth, heuristic value, board, parent
+    lines = read_file()
+    size = int(lines[0][0]) 
+    starting_position[0] = size
+    board = []
+    parent = []
+    for row in range(size):
+        temp = []
+        for col in range(size):
+            temp.append(Cell(lines[row+1][col], row, col))
+        board.append(temp)
+
+    starting_position[3] = board
+    starting_position[4] = parent
+    return starting_position
+
+def read_file():
+    file = open(gui.fileopenbox()).readlines()
+    return [line.replace(" ", "").strip() for line in file]
+
+def print_board(position:list):
+    board = position[3]     # the board itself is stored at this index
+    for row in board:
+        for cell in row:
+            print(cell.value, end="")
+        print()
+    print(f'Size: {position[0]}|Depth: {position[1]}|Heuristic: {position[2]}')
+        
+def print_move(move:list):
+    for row in move:
+        for cell in row:
+            print(cell.value, end="")
+        print()
+    print()
 
 if __name__ == "__main__":
-    gb = GameBoard()
+    gb = start_game()
     start =  time.time()
     p = a_star(gb)
     end = time.time()
     total = end-start
-    if len(p) > 0:
-        p.reverse()
-        print('solution found. printing path:')
-    for step in p:
-        step.print_board()
-        print(step.depth)
-        print()
-    if len(p) > 0:
-        print(f'Solution in {max(step.depth for step in p)} moves')        # minus initial state
-
-    print(f'It took {total} seconds to solve')
+    for move in p:
+        print_move(move)
+    print(f'Solved the puzzle in {total} seconds')
