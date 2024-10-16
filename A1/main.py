@@ -6,6 +6,15 @@ import time
 
 '''
 TODO optimise move generation and compare with closed list in generate function?
+TODO fix parent and path tracking + generation
+TODO a synonym of this is passing a massive parent list around, when we get to extreme number of iterations the 
+parent list is currently holding **every single move ever made/generated** so the list becomes absolutely collosal 
+and passing it around takes a huge toll on execution time
+
+Not exactly sure why this happens, when I remove line 50 it generates the correct number of moves but it will append 
+the solution **exactly** that number of times
+
+not even sure where to start on that
 
 
 TODO implement other heurstics and create heuristic selection functionality
@@ -13,7 +22,7 @@ TODO implement other heurstics and create heuristic selection functionality
 '''
 
 def generate_moves(position:list) -> list[list]:
-    # position[4].append(position[3])
+    position[4].append(position[3])
     empty_cell = find_empty(position)
     move_coordinates = [
         empty_cell.row,
@@ -41,7 +50,7 @@ def generate_moves(position:list) -> list[list]:
             
             if not position[4] or copy[3] not in position[4]:   
                 copy[1] = position[1] + 1
-                # copy[4] = position[4]
+                copy[4] = position[4]
                 all_moves.append(copy)
     return all_moves
 
@@ -114,8 +123,8 @@ def a_star(starting_position:list) -> list[list]:
 
     if not solved: return []
     path = current_state[4]
-    # path.append(current_state[3])
-
+    path.append(current_state[3])
+    # systen.hack.mainfram:noahs{gayasshole/mainfame:C.connect{urmoms house, gaysex}}; Thanks emily 
     return path
 
 def DFS(starting_position:list, max:int) -> list[list]:
