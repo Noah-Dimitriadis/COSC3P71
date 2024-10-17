@@ -42,15 +42,17 @@ def generate_moves(position:list) -> list[list]:
             if not position[4] or copy[3] not in position[4]:   
                 copy[1] = position[1] + 1
                 all_moves.append(copy)
+
     return all_moves
 
 def is_solved(position:list) -> bool:
     board = position[3] 
+    max = position[0]*position[0]
     count = 1           # index 1 has the number 1
     for row in board:
         for cell in row:
             if cell.value == 'X':
-                if count == 9: return True
+                if count == max: return True
                 else: return False
             if int(cell.value) != count: return False
             count += 1
@@ -98,6 +100,8 @@ def a_star(starting_position:list) -> list[list]:
         current_state = open.get()[1]
         solved = is_solved(current_state)
         current_depth = current_state[1]
+        print_board(current_state)
+
         if solved: break
         if current_depth == 50: break
         moves = generate_moves(current_state)
@@ -119,52 +123,50 @@ def a_star(starting_position:list) -> list[list]:
 def DFS(starting_position:list, max:int) -> list[list]:
     solved = False
     path = []
-    closed = []
     open = []
+    closed = []
+    open.append(starting_position)
 
-    current_state = []
-    
-    open.insert(0, starting_position)
-    for i in range(0,max):
-        print(f'Current depth is {i}')
+    while open: 
+        current_state = open.pop(0)
+        solved = is_solved(current_state)
+        current_depth = current_state[1]
         if solved: break
-        while open:
-            current_state = open.pop(0)
-            if is_solved(current_state): 
-                solved = True
-                break
-            if current_state.depth > i+2: break
-
-            moves = generate_moves(current_state)
-            for move in moves:
-                duplicate = False
-                for closed_move in closed:
-                    if move == closed_move:
-                        duplicate = True
-                if not duplicate:
-                    open.append(move)
-            
-            closed.append(current_state)
+        if current_depth == max: break
+        moves = generate_moves(current_state)
         
+        for move in moves:
+            if move[3] not in closed:
+                open.append(move)
+        if not solved:
+            current_state[4] = []
+        closed.append(current_state[3])
+
     if not solved: return []
-    while current_state.parent is not None:
-        path.append(current_state)
-        current_state = current_state.parent
-    path.append(starting_position)
+    path = current_state[4]
+    path.append(current_state[3])
     return path
 
 def start_game() -> list:
     starting_position = [0,0,0,[],[]]         # size, depth, heuristic value, board, parent
     lines = read_file()
+
     size = int(lines[0][0]) 
     starting_position[0] = size
     board = []
     parent = []
-    for row in range(size):
-        temp = []
-        for col in range(size):
-            temp.append(Cell(lines[row+1][col], row, col))
+
+    row_index = 0
+    for row in lines[1:]:
+        numbers = row.split(' ')    
+        temp = []    
+        col_index = 0
+        for num in numbers:
+            temp.append(Cell(num, row_index, col_index))
+            col_index += 1
         board.append(temp)
+        row_index += 1
+        
 
     starting_position[3] = board
     starting_position[4] = parent
@@ -172,7 +174,7 @@ def start_game() -> list:
 
 def read_file():
     file = open(gui.fileopenbox()).readlines()
-    return [line.replace(" ", "").strip() for line in file]
+    return [line.strip() for line in file]
 
 def print_board(position:list):
     print_move(position[3]) # the board itself is stored at this index
@@ -180,14 +182,16 @@ def print_board(position:list):
         
 def print_move(move:list):
     for row in move:
+        print('|', end="")
         for cell in row:
-            print(cell.value, end="")
+            print(f'{cell.value}|', end="")
         print()
     print()
 
 if __name__ == "__main__":
     gb = start_game()
 
+    # print(is_solved(gb))
     start =  time.time()
     p = a_star(gb)
     end = time.time()
