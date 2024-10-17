@@ -64,7 +64,22 @@ def find_empty(position:list) -> Cell:
             for cell in row:
                 if cell.value == 'X': return cell
 
-def heuristic_class_1(position:list) -> int:
+def find_position(position:list, target:int) -> Cell:
+    board = position[3]
+    for row in board:
+        for cell in row:
+            if cell.value == str(target):
+                return cell
+
+def goal_pos(size:int, value:int) -> Cell:
+    count = 1
+    for i in range(size):
+        for j in range(size):
+            if count == value:
+                return Cell(value, i, j)
+            count += 1
+
+def misplaced(position:list) -> int:
     # Heuristic from class -> # of tiles in the wrong spot
     board = position[3]         # this is where the current game board is located
     current = 1
@@ -78,12 +93,19 @@ def heuristic_class_1(position:list) -> int:
             current += 1
     return count
     
-def heuristic_class_2() -> int:
+def manhattan_distance(position:list) -> int:
     # Heuristic from class -> manhattan distance
+    total = 0
+    total_cells = position[0]*position[0]
+    for i in range(1, total_cells):
+        target_cell = find_position(position, i)
+        if target_cell.value != 'X':
+            goal_cell = goal_pos(position[0], i)
+            total = total + abs(target_cell.row - goal_cell.row) + abs(target_cell.col - goal_cell.col)
 
-    pass
+    return total
 
-def heuristic_self() -> int:
+def heuristic_self(position:list) -> int:
     # Heuristic not covered in class TBD
 
     pass
@@ -93,14 +115,13 @@ def a_star(starting_position:list) -> list[list]:
     path = []
     open = PriorityQueue()
     closed = []
-    heuristic = heuristic_class_1(starting_position)
+    heuristic = misplaced(starting_position)
     open.put((heuristic, starting_position))
 
     while open:
         current_state = open.get()[1]
         solved = is_solved(current_state)
         current_depth = current_state[1]
-        print_board(current_state)
 
         if solved: break
         if current_depth == 50: break
@@ -108,7 +129,7 @@ def a_star(starting_position:list) -> list[list]:
         
         for move in moves:
             if move[3] not in closed:
-                heuristic = current_depth + heuristic_class_1(move)
+                heuristic = current_depth + manhattan_distance(move)
                 move[2] = heuristic
                 open.put((heuristic, move))
         if not solved:
@@ -190,8 +211,6 @@ def print_move(move:list):
 
 if __name__ == "__main__":
     gb = start_game()
-
-    # print(is_solved(gb))
     start =  time.time()
     p = a_star(gb)
     end = time.time()

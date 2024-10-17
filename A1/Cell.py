@@ -4,6 +4,9 @@ class Cell:
         self.row = row
         self.col = col
 
+    def __str__(self):
+        return f'Value: {self.value}|Row:  {self.row}|Col: {self.col}'
+
     def __lt__(self, other):
         return self.value < other.value
     
