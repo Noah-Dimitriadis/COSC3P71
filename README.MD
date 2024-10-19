@@ -1,7 +1,7 @@
 # Noah Dimitriadis 7558224
 All the dependencies can be found inside requirements.txt
 
-The only dependency that is in there is easy gui which is used to provide a nice file selection window. 
+The only dependency that is in there is easygui which is used to provide a nice file selection window. 
 To install it run: ```pip install easygui```
 **OR**
 ```pip install -r requirements.txt```

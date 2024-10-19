@@ -104,10 +104,22 @@ def manhattan_distance(position:list) -> int:
 
     return total
 
-def heuristic_self(position:list) -> int:
-    # Heuristic not covered in class TBD
+def misplaced_rows_cols(position:list) -> int:
+    total = 0
+    total_cells = position[0]*position[0]
 
-    return 0
+    for i in range(1, total_cells):
+        target_cell = find_position(position, i)
+        if target_cell.value != 'X':        # we dont *really* care where the empty cell is, we are not calculating it into the heuristic
+            goal_cell = goal_pos(position[0], i)
+            row = abs(target_cell.row - goal_cell.row)
+            col = abs(target_cell.col - goal_cell.col)
+            if row > 0:
+                total += 1
+            if col > 0:
+                total += 1
+
+    return total
 
 def a_star_misplaced(starting_position:list, max:int) -> list[list]:
     solved = False
@@ -167,7 +179,8 @@ def a_star_manhattan(starting_position:list, max:int) -> list[list]:
     current_state[4].append(current_state[3])   # add initial state to our path
     return current_state[4]
 
-def a_star_PLACEHOLDER(starting_position:list, max:int) -> list[list]:
+def a_star_rows_cols(starting_position:list, max:int) -> list[list]:
+    # the A* algorithm using the misplaced rows and columns heuristic
     solved = False
     open = PriorityQueue()
     closed = []
@@ -178,14 +191,13 @@ def a_star_PLACEHOLDER(starting_position:list, max:int) -> list[list]:
         current_state = open.get()[1]       # we pass in a tuple so we need the actual position hence the [1] at the end here
         solved = is_solved(current_state)
         current_depth = current_state[1]
-
         if solved: break
         if current_depth == max: return []
         moves = generate_moves(current_state)
         
         for move in moves:
             if move[3] not in closed:       # as long as a newly generated move hasnt been seen before we add it to the frontier and calculate its heuristic
-                heuristic = current_depth + heuristic_self(move)
+                heuristic = current_depth + misplaced_rows_cols(move)
                 move[2] = heuristic     # this is never used again but it was helpful for debugging so i kept it
                 open.put((heuristic, move))
         
@@ -223,9 +235,9 @@ def a_star(starting_position:list, heuristic:int):
             print(f'Solved the puzzle in {total} seconds with {len(p)-1} moves')        # -1 for the initial move
 
     elif heuristic == 3:
-        print('A* with the PLACEHOLDER heuristic')
+        print('A* with the misplaced rows and columns heuristic')
         start =  time.time()
-        p = a_star_PLACEHOLDER(starting_position, 1000)       # max depth of 1000 by default
+        p = a_star_rows_cols(starting_position, 1000)       # max depth of 1000 by default
         end = time.time()
         total = end - start
 
@@ -240,7 +252,7 @@ def a_star(starting_position:list, heuristic:int):
 def IDA_star(starting_position:list, heuristic:int, max_depth:int):
     solved = False
     if heuristic == 1:
-        print('Iteraitive Depth A* with the manhattan distance heuristic')
+        print('Iteraitive Depth A* with the misplaced tiles heuristic')
         start =  time.time()
         for limit in range(1, max_depth):
             path = a_star_misplaced(starting_position, limit) 
@@ -279,10 +291,10 @@ def IDA_star(starting_position:list, heuristic:int, max_depth:int):
             print(f'The puzzle could not be solved by the max depth of {max_depth}. Total execution time was {total} seconds\n')      
         
     elif heuristic == 3:
-        print('Iteraitive Depth A* with the PLACEHOLDER heuristic')
+        print('Iteraitive Depth A* with the misplaced rows and columns heuristic')
         start =  time.time()
         for limit in range(1, max_depth):
-            path = a_star_PLACEHOLDER(starting_position, limit) 
+            path = a_star_rows_cols(starting_position, limit) 
             if path: 
                 print(f'Found a solution at depth: {limit-1}.')
                 solved = True
@@ -385,7 +397,7 @@ def print_move(move:list):
         print()
     print()
 
-if __name__ == "__main__":
+def main():
     print("Hello there! Provided all the requirements from 'requirements.txt' have been installed correctly, you should see a pop up window promting you to select a file. Please select it now!")
     gameboard = start_game()
     continue_game = True
@@ -424,7 +436,7 @@ if __name__ == "__main__":
             print('You have chosen A* Search!')
             while True:
                 try:
-                    heuristic = int(input('Please enter the heuristic you would like to solve with.\n1 for misplaced tiles\n2 for manhattan distance\n3 for PLACEHOLDER\nEnter your selection: '))
+                    heuristic = int(input('Please enter the heuristic you would like to solve with.\n1 for misplaced tiles\n2 for manhattan distance\n3 for misplaced rows and columns\nEnter your selection: '))
                 except ValueError:
                     print('Invalid value. Please enter an integer.\n')
                     continue
@@ -440,7 +452,7 @@ if __name__ == "__main__":
             print('You have chosen Iterative Deepening A* Search!')
             while True:
                 try:
-                    heuristic = int(input('Please enter the heuristic you would like to solve with.\n1 for misplaced tiles\n2 for manhattan distance\n3 for PLACEHOLDER\nEnter your selection: '))
+                    heuristic = int(input('Please enter the heuristic you would like to solve with.\n1 for misplaced tiles\n2 for manhattan distance\n3 for misplaced rows and columns\nEnter your selection: '))
                 except ValueError:
                     print('Invalid value. Please enter an integer.\n')
                     continue
@@ -482,5 +494,5 @@ if __name__ == "__main__":
                 print()
                 break
 
-        
-    
+if __name__ == "__main__":
+    main()
