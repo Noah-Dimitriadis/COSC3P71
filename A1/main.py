@@ -107,7 +107,7 @@ def manhattan_distance(position:list) -> int:
 def heuristic_self(position:list) -> int:
     # Heuristic not covered in class TBD
 
-    pass
+    return 0
 
 def a_star_misplaced(starting_position:list, max:int) -> list[list]:
     solved = False
@@ -295,7 +295,7 @@ def IDA_star(starting_position:list, heuristic:int, max_depth:int):
             if len(path) > 0:
                 print(f'Solved the puzzle in {total} seconds with {len(path)-1} moves\n')        # -1 for the initial move
         else:
-            print(f'The puzzle could not be solved by the max depth of {max_depth}. Total execution time was {total} seconds\n')    
+            print(f'The puzzle could not be solved by the max depth of {max_depth}. Total execution time was {total} seconds')    
 
     else:
         print('Invalid heuristic choice')
@@ -388,8 +388,8 @@ def print_move(move:list):
 if __name__ == "__main__":
     print("Hello there! Provided all the requirements from 'requirements.txt' have been installed correctly, you should see a pop up window promting you to select a file. Please select it now!")
     gameboard = start_game()
-
-    while True:
+    continue_game = True
+    while continue_game:   
         try:
             print('Please select what algorithm you would like to solve your puzzle with:\n1 for Iterative Deepening Depth First Search\n2 for A*\n3 for IDA*\n0 to quit')
             selection = int(input('Enter your selection: '))
@@ -408,7 +408,7 @@ if __name__ == "__main__":
             print('You have chosen Iterative Deepening Depth First Search!')
             while True:
                 try:
-                    max_depth = int(input('Please enter a your maximum depth: '))
+                    max_depth = int(input('Please enter your maximum depth: '))
                 except ValueError:
                     print('Invalid value. Please enter an integer.\n')
                     continue
@@ -450,7 +450,7 @@ if __name__ == "__main__":
                     break
             while True:
                 try:
-                    max_depth = int(input('Please enter a your maximum depth: '))
+                    max_depth = int(input('Please enter your maximum depth: '))
                 except ValueError:
                     print('Invalid value. Please enter an integer.\n')
                     continue
@@ -461,6 +461,26 @@ if __name__ == "__main__":
                     break
             IDA_star(gameboard, heuristic, max_depth)
             print()
+        while True:
+            try:
+                value = int(input('Enter 1 for the same file\nEnter 2 to choose a different file\nPress 0 to quit\nEnter your choice: '))
+            except ValueError:
+                print('Invalid value. Please enter a valid selection.\n')
+                continue
+            if value < 0 or value > 2:
+                print('Invalid value. Please enter a valid selection\n')
+                continue
+            if value == 0:
+                print('Goodbye!')
+                continue_game = False
+                break
+            elif value == 2:
+                print()
+                gameboard = start_game()
+                break
+            else:
+                print()
+                break
 
         
     
