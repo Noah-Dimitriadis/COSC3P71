@@ -5,6 +5,8 @@ import random
 TODO make sure we have a way to determine the order of the data dict, it seems to be sorted but this needs to be confirmed
 TODO figure out population size for generate func, also rename this 
 TODO write fitness function -> see pseudo code provided
+TODO fitness function will need a way to see prof schedule and room schedule, func to generate these will be required,
+probably on chromosome creation is best
 TODO write selection function
 TODO decide on crossover strat implementation and write func
 TODO decide on mutation strat implementation and write func
