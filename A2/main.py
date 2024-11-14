@@ -3,15 +3,12 @@ import random
 from pprint import pprint
 
 '''
-
-TODO write fitness function -> see pseudo code provided
-TODO fitness function -> need to flag cases where duration is a factor
-
 TODO decide on crossover strat implementation and write func
 TODO decide on mutation strat implementation and write func
 '''
 
 DATA = dict()
+# no_conflicts = [[0, 1, 0], [1, 0, 10], [2, 3, 5], [3, 0, 8], [4, 1, 15], [5, 0, 0], [6, 1, 2], [7, 1, 3], [8, 1, 17], [9, 1, 7], [10, 1, 13], [11, 0, 7], [12, 0, 6], [13, 0, 19], [14, 1, 20], [15, 1, 6], [16, 0, 2], [17, 3, 10], [18, 0, 4], [19, 0, 13], [20, 0, 16], [21, 1, 19], [22, 0, 17], [23, 0, 18], [24, 1, 9]]
 
 def create_dict(file_name:str) -> dict:
     file = open(file_name)
@@ -132,63 +129,65 @@ def get_professor_schedules(chromosome:list[list]):
                 prof_schedule.append(gene)                  # appending indexes
         prof_schedule.sort(key = lambda slot: slot[2])      # sort by timeslots
         all_prof_schedules.append(prof_schedule)
-        
+
     return all_prof_schedules
 
 def evaluate_fitness(chromosome:list[list]) -> float:
-    conflicts = 0
-    prof_conflicts = 0
-    room_conflicts = 0
+    # capacity conflicts
     capacity_conflicts = 0
-    room_usages = get_room_usages(chromosome)
-    professor_schedules = get_professor_schedules(chromosome)
-
     courses = DATA['courses']
     rooms = DATA['rooms']
-    days = DATA['days']
 
     for gene in chromosome:
         gene_course = gene[0]
         gene_room = gene[1]
-        # gene_time = gene[2]
-        if int(courses[gene_course][2]) > int(rooms[gene_room][1]):     # check capacity conflicts
-            # print_gene(gene)
 
-            conflicts += 1
+        if int(courses[gene_course][2]) > int(rooms[gene_room][1]):
             capacity_conflicts += 1
-            pass
 
-        #TODO need to add a check to see if durations overlap
+    # room usage conflicts
+    room_conflicts = 0
+    room_usages = get_room_usages(chromosome)
 
-        for day in days:
-            for hour in day:
+    for schedule in room_usages:
+        for booking in schedule:
+            day = DATA['timeslots'][booking[2]][0]
+            start_time = int(DATA['timeslots'][booking[2]][1])
+            duration = int(DATA['courses'][booking[0]][3])
+            end_time = start_time + duration                                    # start time + class duration
+
+            for gene in schedule:
+                gene_day = DATA['timeslots'][gene[2]][0]
+                gene_start_time = int(DATA['timeslots'][gene[2]][1])
                 
-                pass
+                if gene_start_time >= end_time:
+                    break                                           # room_usages is sorted by time so we can break when we start later then the current end_time
+                elif gene_start_time >= start_time and gene_start_time < end_time and day == gene_day and gene[0] != booking[0]: # if the gene start time is inside the duration of the bookings time, the days are the same and the courses different
+                        room_conflicts += 1
+    
+    # professor scheduling conflicts
+    prof_conflicts = 0
+    professor_schedules = get_professor_schedules(chromosome)
 
+    for schedule in professor_schedules:
+        for booking in schedule:
+            day = DATA['timeslots'][booking[2]][0]
+            start_time = int(DATA['timeslots'][booking[2]][1])
+            duration = int(DATA['courses'][booking[0]][3])
+            end_time = start_time + duration                                    # start time + class duration
 
-        for schedule in room_usages:                                    # check room start conflicts
-            for i in range(1, len(schedule)):
-                if schedule[i][2] == schedule[i-1][2]:
-                    print('room conflict [')
-                    print_gene(schedule[i])
-                    print_gene(schedule[i-1])
-                    print(']')
-                    room_conflicts += 1
-                    conflicts += 1
-        
-        for schedule in professor_schedules:                            # check prof start conflicts
-            for i in range(1, len(schedule)):
-                if schedule[i][2] == schedule[i-1][2]:
-                    print('prof conflict [')
-                    print_gene(schedule[i])
-                    print_gene(schedule[i-1])
-                    print(']')
-                    prof_conflicts += 1
-                    conflicts += 1
+            for gene in schedule:
+                gene_day = DATA['timeslots'][gene[2]][0]
+                gene_start_time = int(DATA['timeslots'][gene[2]][1])
+                
+                if gene_start_time >= end_time:
+                    break                                           # professor_schedules is sorted by time so we can break when we start later then the current end_time
+                elif gene_start_time >= start_time and gene_start_time < end_time and day == gene_day and gene[0] != booking[0]: # if the gene start time is inside the duration of the bookings time, the days are the same and the courses different
+                        prof_conflicts += 1 
 
-        
-
+    conflicts = capacity_conflicts + room_conflicts + prof_conflicts
     # print(f'capacity conflicts: {capacity_conflicts} room conflicts: {room_conflicts} prof conflicts: {prof_conflicts} total conflicts: {conflicts}')
+    # print(conflicts)
     return 1 / (1 + conflicts)
 
 def tournament_select(population:list[list[list]]) -> list[list[list]]:
@@ -197,26 +196,29 @@ def tournament_select(population:list[list[list]]) -> list[list[list]]:
     for i in range(rounds):
         fittest = []
         choices = random.sample(population, 4)
-        print('checking fitnesses for selected choices')
         for choice in choices:
             fitness = evaluate_fitness(choice)
-            print(fitness)
             pair = (fitness, choice)
             fittest.append(pair)
             population.remove(choice)
         
-        print('selecting top two')
         fittest.sort(key=lambda k: k[0], reverse=True)        # sort by the fitness (the first part of the tuple), strongest at the front
 
         fit.append(fittest[0][1])        # the last two elements i.e. the two the least fit are removed from the population
-        print(fittest[0][0])
-        print(fittest[1][0])
         fit.append(fittest[1][1])
 
     return fit
 
+def mutate(mutation_rate:int, chromosome:list[list]) -> list[list]:
+    # take whatever the rate is and get num of indexes 
+    # randomly select 
+    # randomly generate new room and timeslot
+    # insert back into list
+    
+    return chromosome
+
 if __name__ == "__main__":
     DATA = read_all()
-    # population_before = generate_population(10)
-    # print('performing tournament select')
-    # population = tournament_select(population_before)
+
+    population = generate_population(500)
+    
