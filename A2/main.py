@@ -3,8 +3,10 @@ import random
 from pprint import pprint
 
 '''
+TODO mutation helper to do for a certain percentage of the pop
 TODO decide on crossover strat implementation and write func
-TODO decide on mutation strat implementation and write func
+TODO helper function to create parent pairing and take top 10% of pop (elitism)
+TODO actual GA function that does all the parts (once everything works individually)
 '''
 
 DATA = dict()
@@ -66,7 +68,7 @@ def generate_population(size:int) -> list[list[list]]:
     population = []
     courses = DATA['courses']
     for i in range(size):
-        chromosome = []         # TODO could this be easier with a dictionary? test
+        chromosome = []
         for course in courses:
             random_room = random.randrange(0, len(DATA['rooms']))
             random_time = random.randrange(0, len(DATA['timeslots']))
@@ -209,16 +211,47 @@ def tournament_select(population:list[list[list]]) -> list[list[list]]:
 
     return fit
 
-def mutate(mutation_rate:int, chromosome:list[list]) -> list[list]:
-    # take whatever the rate is and get num of indexes 
-    # randomly select 
-    # randomly generate new room and timeslot
-    # insert back into list
-    
+def mutate(mutation_rate:float, chromosome:list[list]) -> list[list]:
+    num_indexes = int(mutation_rate * len(chromosome))
+    mutation_indexes = random.sample(chromosome, num_indexes)
+
+    for gene in mutation_indexes:
+        mutated_room = random.randrange(0, len(DATA['rooms']))
+        mutated_time = random.randrange(0, len(DATA['timeslots']))
+        gene[1] = mutated_room
+        gene[2] = mutated_time
+
     return chromosome
+
+def uniform_crossover(parents:list[list[list]]) -> list[list[list]]:
+    offspring = []
+
+    # helper method to choose parents using the crossover rate
+    # 50/50 chance to choose gene from parent, random num between 0,1 then choose
+    # create new child with selected genes
+    # repeat for 2 children
+
+
+    return offspring
+
+def point_crossover(crossover_rate:float, k:int, chromosome1:list[list], chromosome2:list[list]) -> list[list[list]]:
+    offspring = []
+
+    return offspring
+
 
 if __name__ == "__main__":
     DATA = read_all()
 
     population = generate_population(500)
+
+    c1 = population[0]
+    c2 = population[0]
+
+    children = uniform_crossover(0.5, [c1,c2])
+
+    for c in children:
+        print_chromosome(c)
+
+    
     
