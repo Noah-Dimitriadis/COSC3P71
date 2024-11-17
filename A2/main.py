@@ -3,10 +3,11 @@ import random
 from pprint import pprint
 
 '''
-TODO mutation helper to do for a certain percentage of the pop
-TODO decide on crossover strat implementation and write func
-TODO helper function to create parent pairing and take top 10% of pop (elitism)
 TODO actual GA function that does all the parts (once everything works individually)
+TODO elite function - may require a redo of how the population is created, (dict or tuple)
+TODO remove elites from mutation
+TODO finish crossover function 
+TODO once GA function works, write results to output file
 '''
 
 DATA = dict()
@@ -211,47 +212,56 @@ def tournament_select(population:list[list[list]]) -> list[list[list]]:
 
     return fit
 
-def mutate(mutation_rate:float, chromosome:list[list]) -> list[list]:
-    num_indexes = int(mutation_rate * len(chromosome))
-    mutation_indexes = random.sample(chromosome, num_indexes)
+def mutate(mutation_rate:float, population:list[list[list]]) -> list[list[list]]:
+    # remove elites 
+    num_indexes = int(mutation_rate * len(population[0]))       # all the chromosomes have the same number of genes
+    
+    for chromosome in population:
+        mutation_indexes = random.sample(chromosome, num_indexes)
+        print_chromosome(chromosome)
+        for gene in mutation_indexes:
+            mutated_room = random.randrange(0, len(DATA['rooms']))
+            mutated_time = random.randrange(0, len(DATA['timeslots']))
 
-    for gene in mutation_indexes:
-        mutated_room = random.randrange(0, len(DATA['rooms']))
-        mutated_time = random.randrange(0, len(DATA['timeslots']))
-        gene[1] = mutated_room
-        gene[2] = mutated_time
+            gene[1] = mutated_room
+            gene[2] = mutated_time
+        print()
+        print_chromosome(chromosome)
 
-    return chromosome
+    return population
 
-def uniform_crossover(parents:list[list[list]]) -> list[list[list]]:
+def crossover_population(crossover_rate:float, crossover_method:int, population) -> list[list[list]]:
+    num_indexes = int(crossover_rate * len(population))
+    # have elites clone themselves here
+    # iterate over the remaining chromosome pairs
+    # pass pairs to crossover method 
+    # choose crossover method based on param
+    # append returned offspring to population
+
+    return population
+
+def uniform_crossover(crossover_rate:float, k:int, parents:list[list[list]]) -> list[list[list]]:
     offspring = []
 
-    # helper method to choose parents using the crossover rate
     # 50/50 chance to choose gene from parent, random num between 0,1 then choose
     # create new child with selected genes
     # repeat for 2 children
 
-
     return offspring
 
-def point_crossover(crossover_rate:float, k:int, chromosome1:list[list], chromosome2:list[list]) -> list[list[list]]:
-    offspring = []
+def GA(population_size:int, generations:int, mutation_rate:float, crossover_rate:float):
+    population = generate_population(population_size)
 
-    return offspring
+    for i in range(generations):
+        population = tournament_select(population)
+        population = mutate(mutation_rate, population)
+        population = crossover_population(crossover_rate)
+
 
 
 if __name__ == "__main__":
     DATA = read_all()
 
-    population = generate_population(500)
-
-    c1 = population[0]
-    c2 = population[0]
-
-    children = uniform_crossover(0.5, [c1,c2])
-
-    for c in children:
-        print_chromosome(c)
-
-    
+    population_1 = generate_population(1)
+    population_2 = mutate(0.5, population_1)
     
