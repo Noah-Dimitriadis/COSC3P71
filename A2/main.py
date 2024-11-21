@@ -1,9 +1,11 @@
 import easygui as gui
 import random
 from pprint import pprint
+from copy import deepcopy
 
 '''
 TODO actual GA function that does all the parts (once everything works individually)
+
 TODO elite function - may require a redo of how the population is created, (dict or tuple)
 TODO remove elites from mutation
 TODO finish crossover function 
@@ -76,7 +78,7 @@ def generate_population(size:int) -> list[list[list]]:
             gene = [course, random_room, random_time]
             chromosome.append(gene)
 
-        population.append(chromosome)
+        population.append([chromosome, evaluate_fitness(chromosome)])
     return population
 
 def print_gene(gene:list):
@@ -163,9 +165,9 @@ def evaluate_fitness(chromosome:list[list]) -> float:
                 gene_day = DATA['timeslots'][gene[2]][0]
                 gene_start_time = int(DATA['timeslots'][gene[2]][1])
                 
-                if gene_start_time >= end_time:
-                    break                                           # room_usages is sorted by time so we can break when we start later then the current end_time
-                elif gene_start_time >= start_time and gene_start_time < end_time and day == gene_day and gene[0] != booking[0]: # if the gene start time is inside the duration of the bookings time, the days are the same and the courses different
+                # if gene_start_time >= end_time:
+                #     break                                           # room_usages is sorted by time so we can break when we start later then the current end_time
+                if gene_start_time >= start_time and gene_start_time < end_time and day == gene_day and gene[0] != booking[0]: # if the gene start time is inside the duration of the bookings time, the days are the same and the courses different
                         room_conflicts += 1
     
     # professor scheduling conflicts
@@ -183,9 +185,9 @@ def evaluate_fitness(chromosome:list[list]) -> float:
                 gene_day = DATA['timeslots'][gene[2]][0]
                 gene_start_time = int(DATA['timeslots'][gene[2]][1])
                 
-                if gene_start_time >= end_time:
-                    break                                           # professor_schedules is sorted by time so we can break when we start later then the current end_time
-                elif gene_start_time >= start_time and gene_start_time < end_time and day == gene_day and gene[0] != booking[0]: # if the gene start time is inside the duration of the bookings time, the days are the same and the courses different
+                # if gene_start_time >= end_time:
+                #     break                                           # professor_schedules is sorted by time so we can break when we start later then the current end_time
+                if gene_start_time >= start_time and gene_start_time < end_time and day == gene_day and gene[0] != booking[0]: # if the gene start time is inside the duration of the bookings time, the days are the same and the courses different
                         prof_conflicts += 1 
 
     conflicts = capacity_conflicts + room_conflicts + prof_conflicts
@@ -200,68 +202,131 @@ def tournament_select(population:list[list[list]]) -> list[list[list]]:
         fittest = []
         choices = random.sample(population, 4)
         for choice in choices:
-            fitness = evaluate_fitness(choice)
-            pair = (fitness, choice)
-            fittest.append(pair)
+            fittest.append(choice)
             population.remove(choice)
         
-        fittest.sort(key=lambda k: k[0], reverse=True)        # sort by the fitness (the first part of the tuple), strongest at the front
-
-        fit.append(fittest[0][1])        # the last two elements i.e. the two the least fit are removed from the population
-        fit.append(fittest[1][1])
+        fittest.sort(key=lambda k: k[1], reverse=True)       # sort by the fitness (the first part f the tuple), strongest at the front
+        fit.append(fittest[0])        # the last two elements i.e. the two the least fit are removed from the population
+        fit.append(fittest[1])
 
     return fit
 
-def mutate(mutation_rate:float, population:list[list[list]]) -> list[list[list]]:
-    # remove elites 
-    num_indexes = int(mutation_rate * len(population[0]))       # all the chromosomes have the same number of genes
+def mutate(mutation_rate:float, population:list[list[list]], generation_num:int) -> list[list[list]]:
+    # calculate number of elites 
+    population.sort(key=lambda k: k[1], reverse=True)
+
+    # if generation_num % 25 == 0: 
+    #     num_elites = 2
+    # else:
+    #     num_elites = int(0.01 * len(population))                       # the top 10% are elite
+    num_elites = int(0.05 * len(population))
     
-    for chromosome in population:
-        mutation_indexes = random.sample(chromosome, num_indexes)
-        print_chromosome(chromosome)
+    num_indexes = int(mutation_rate * len(population[0][0]))        # all the chromosomes have the same number of genes
+    
+    for chromosome in population[num_elites:]:                      # skip elites
+        mutation_indexes = random.sample(chromosome[0], num_indexes)
         for gene in mutation_indexes:
             mutated_room = random.randrange(0, len(DATA['rooms']))
             mutated_time = random.randrange(0, len(DATA['timeslots']))
 
             gene[1] = mutated_room
             gene[2] = mutated_time
-        print()
-        print_chromosome(chromosome)
+
+        mutated_fitness = evaluate_fitness(chromosome[0])           # update fitness
+        chromosome[1] = mutated_fitness
 
     return population
 
-def crossover_population(crossover_rate:float, crossover_method:int, population) -> list[list[list]]:
-    num_indexes = int(crossover_rate * len(population))
-    # have elites clone themselves here
-    # iterate over the remaining chromosome pairs
-    # pass pairs to crossover method 
-    # choose crossover method based on param
-    # append returned offspring to population
+def reproduce(crossover_rate:float, crossover_method:int, population:list[list[list]]) -> list[list[list]]:
+    # TODO choose crossover method based on param
 
+    # get elites
+    population.sort(key=lambda k: k[1], reverse=True)
+    num_elites = int(0.01 * len(population))            # top 10%
+
+    # number of chromosomes we want to crossover
+    num_crossover = int(crossover_rate * len(population)) - num_elites
+    if num_crossover % 2 == 1: num_crossover += 1          # keep an even number
+    
+    for chromosome in population[0:num_elites]:
+        population.append(deepcopy(chromosome))
+        pass
+
+    crossover_parents = random.sample(population, k=len(population) - num_elites*2)     # effectively shuffles the population indexes 
+    
+    for i in range(0, num_crossover, 2):                       # start after the elites and the clones
+        parents = [crossover_parents[i], crossover_parents[i-1]]                  # take pairs of indexes that arent elite to be parents 
+        offspring = uniform_crossover(parents)
+        for child in offspring:
+            population.append(child)
+    
+    for parent in crossover_parents[num_crossover:]:                # take all items that werent crossed over
+        population.append(deepcopy(parent))
+    
     return population
 
-def uniform_crossover(crossover_rate:float, k:int, parents:list[list[list]]) -> list[list[list]]:
+def uniform_crossover(parents:list[list[list]]) -> list[list[list]]:
     offspring = []
-
-    # 50/50 chance to choose gene from parent, random num between 0,1 then choose
-    # create new child with selected genes
-    # repeat for 2 children
+    for c in range(2):                      # create 2 children
+        child = []
+        for i in range(len(parents[0][0])):   # both parents have the same number of genes   
+            r = random.randint(0,1)         # 50/50 chance to choose gene from parent
+            if r == 0:
+                child.append(parents[0][0][i])
+            else:
+                child.append(parents[1][0][i])
+        
+        fitness = evaluate_fitness(child)       # need to add fitness
+        offspring.append([child, fitness])
 
     return offspring
+    
+def GA(population_size:int, generations:int, mutation_rate:float, crossover_rate:float) -> float:
+    population_1 = generate_population(population_size)
+    for i in range(1, generations):
+        population_1 = tournament_select(population_1)
+        population_1 = reproduce(crossover_rate, 1, population_1)
+        population_1 = mutate(mutation_rate, population_1, i)
 
-def GA(population_size:int, generations:int, mutation_rate:float, crossover_rate:float):
-    population = generate_population(population_size)
 
-    for i in range(generations):
-        population = tournament_select(population)
-        population = mutate(mutation_rate, population)
-        population = crossover_population(crossover_rate)
+        population_1.sort(key=lambda k: k[1], reverse=True)
+        print(f'generation: {i} fittest: {population_1[0][1]}, {population_1[1][1]}, {population_1[2][1]}')
 
+    population_1.sort(key=lambda k: k[1], reverse=True)
+    
+    d = 1
+    duplicates = []
+    for i in range(1, len(population_1)):
+        if population_1[i][1] == population_1[i-1][1]:
+            d += 1
+        else:
+            duplicates.append((population_1[i-1][1], d))
+            d = 1
+    duplicates.append((population_1[i-1][1], d))
+    
+    pprint(duplicates)
+    sum = 0.0
+    for c in population_1:
+        sum = c[1] + sum
 
+    print(f'The average fitness is: {sum / len(population_1)}')
+    print(f'The best fitness is: {population_1[0][1]}')
+    return population_1[0]
 
 if __name__ == "__main__":
     DATA = read_all()
 
-    population_1 = generate_population(1)
-    population_2 = mutate(0.5, population_1)
+    top_fitnesses = []
+    for i in range(5):
+        top_fitnesses.append(GA(8000, 75, 0.00, 1)[1])
+    # print('pop: 4000 gen: 500 mutation rate: 0.1 crossover rate: 0.9')
+    print(top_fitnesses)
+
+    # print(f'{GA(4000, 50, 0.00, 0.9)[1]}')
+
+#     test = [[0, 1, 18], [1, 0, 15], [2, 2, 14], [3, 0, 14], [4, 1, 3], [5, 0, 14], [6, 1, 12], [7, 1, 16], [8, 0, 9], [9, 1, 15], [10, 1, 14], [11, 0, 2], [12, 0, 14], [13, 0, 14], [14, 1, 6], [15, 1, 0], [16, 0, 15], [17, 1, 14], [18, 0, 10], [19, 0, 4], [20, 0, 19], [21, 0, 8], [22, 0, 11], [23, 0, 
+# 14], [24, 0, 0]]
+    
+#     print(evaluate_fitness(test))
+    
     
