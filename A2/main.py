@@ -216,7 +216,7 @@ def reproduce(crossover_rate:float, crossover_method:int, mutation_rate:float, p
     # TODO FIX ELITISM
     # get elites
     population.sort(key=lambda k: k[1], reverse=True)
-    num_elites = int(0.10 * len(population))            # top 10%
+    num_elites = int(0.05 * len(population))            # top 10%
 
     # number of chromosomes we want to crossover
     num_crossover = int(crossover_rate * len(population)) - num_elites
@@ -319,6 +319,7 @@ def uniform_crossover(parents:list[list[list]]) -> list[list[list]]:
     return offspring
     
 def GA(population_size:int, generations:int, mutation_rate:float, crossover_rate:float) -> float:
+    # TODO add elitism parameter
     population_1 = generate_population(population_size)
     for i in range(1, generations):
         population_1 = tournament_select(population_1)
