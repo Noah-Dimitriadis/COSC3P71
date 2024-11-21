@@ -211,42 +211,16 @@ def tournament_select(population:list[list[list]]) -> list[list[list]]:
 
     return fit
 
-def mutate(mutation_rate:float, population:list[list[list]], generation_num:int) -> list[list[list]]:
-    # calculate number of elites 
-    population.sort(key=lambda k: k[1], reverse=True)
-
-    # if generation_num % 25 == 0: 
-    #     num_elites = 2
-    # else:
-    #     num_elites = int(0.01 * len(population))                       # the top 10% are elite
-    num_elites = int(0.05 * len(population))
-    
-    num_indexes = int(mutation_rate * len(population[0][0]))        # all the chromosomes have the same number of genes
-    
-    for chromosome in population[num_elites:]:                      # skip elites
-        mutation_indexes = random.sample(chromosome[0], num_indexes)
-        for gene in mutation_indexes:
-            mutated_room = random.randrange(0, len(DATA['rooms']))
-            mutated_time = random.randrange(0, len(DATA['timeslots']))
-
-            gene[1] = mutated_room
-            gene[2] = mutated_time
-
-        mutated_fitness = evaluate_fitness(chromosome[0])           # update fitness
-        chromosome[1] = mutated_fitness
-
-    return population
-
-def reproduce(crossover_rate:float, crossover_method:int, population:list[list[list]]) -> list[list[list]]:
+def reproduce(crossover_rate:float, crossover_method:int, mutation_rate:float, population:list[list[list]]) -> list[list[list]]:
     # TODO choose crossover method based on param
-
+    # TODO FIX ELITISM
     # get elites
     population.sort(key=lambda k: k[1], reverse=True)
-    num_elites = int(0.01 * len(population))            # top 10%
+    num_elites = int(0.10 * len(population))            # top 10%
 
     # number of chromosomes we want to crossover
     num_crossover = int(crossover_rate * len(population)) - num_elites
-    if num_crossover % 2 == 1: num_crossover += 1          # keep an even number
+    if num_crossover % 2 == 1: num_crossover += 1          # keep an even number to maintain pop size
     
     for chromosome in population[0:num_elites]:
         population.append(deepcopy(chromosome))
@@ -254,23 +228,86 @@ def reproduce(crossover_rate:float, crossover_method:int, population:list[list[l
 
     crossover_parents = random.sample(population, k=len(population) - num_elites*2)     # effectively shuffles the population indexes 
     
-    for i in range(0, num_crossover, 2):                       # start after the elites and the clones
-        parents = [crossover_parents[i], crossover_parents[i-1]]                  # take pairs of indexes that arent elite to be parents 
-        offspring = uniform_crossover(parents)
+    for i in range(0, num_crossover, 2):                                                # start after the elites and the clones
+        parents = [crossover_parents[i], crossover_parents[i-1]]                        # take pairs of indexes that arent elite to be parents 
+        offspring = uniform_crossover(parents)  
         for child in offspring:
             population.append(child)
     
-    for parent in crossover_parents[num_crossover:]:                # take all items that werent crossed over
+    for parent in crossover_parents[num_crossover:]:                   # add all items that werent crossed over are added to the population, effectively cloning 
         population.append(deepcopy(parent))
-    
+
+
+    num_mutated = int(mutation_rate * len(population))
+    for i in range(num_mutated):
+        choice = random.randint(0,1)
+        if choice == 0:
+            chromosome = mutate_top_50(random.choice(population)[0], population)
+        else:
+            chromosome = mutate_random(random.choice(population)[0])
+            
     return population
+
+def mutate_random(chromosome:list[list[list]]) -> list[list[list]]:
+    allele_to_mutate = random.randint(0, 2)
+    num_genes_mutated = random.randint(1, 2)
+
+    if allele_to_mutate == 0:
+        for i in range(num_genes_mutated):
+            gene = random.choice(chromosome)
+            gene[1] = random.randrange(0, len(DATA['rooms']))
+    elif allele_to_mutate == 1:
+        for i in range(num_genes_mutated):
+            gene = random.choice(chromosome)
+            gene[2] = random.randrange(0, len(DATA['timeslots']))
+    else:
+        for i in range(num_genes_mutated):
+            gene = random.choice(chromosome)
+            gene[1] = random.randrange(0, len(DATA['rooms']))
+            gene[2] = random.randrange(0, len(DATA['timeslots']))
+
+    chromosome.sort(key= lambda k: k[0])
+    return chromosome
+
+def mutate_top_50(chromosome:list[list[list]], population:list[list[list[list]]]) -> list[list[list]]:
+    # allele_to_mutate = random.randint(0, 2)
+    num_genes_mutated = random.randint(1, 2)
+    allele_to_mutate = 1
+    if allele_to_mutate == 0:
+        for i in range(num_genes_mutated):
+            gene = random.choice(chromosome)
+
+            top_choice = random.randint(0, int(len(population)/2))
+            top_gene = random.choice(population[top_choice][0])
+
+            gene[1] = top_gene[1]
+    elif allele_to_mutate == 1:
+        for i in range(num_genes_mutated):
+            gene = random.choice(chromosome)
+            
+            top_choice = random.randint(0, int(len(population)/2))
+            top_gene = random.choice(population[top_choice][0])
+
+            gene[2] = top_gene[2]
+    else:
+        for i in range(num_genes_mutated):
+            gene = random.choice(chromosome)
+
+            top_choice = random.randint(0, int(len(population)/2))
+            top_gene = random.choice(population[top_choice][0])
+
+            gene[1] = top_gene[1]
+            gene[2] = top_gene[2]
+
+    chromosome.sort(key= lambda k: k[0])
+    return chromosome
 
 def uniform_crossover(parents:list[list[list]]) -> list[list[list]]:
     offspring = []
-    for c in range(2):                      # create 2 children
+    for c in range(2):                          # create 2 children
         child = []
-        for i in range(len(parents[0][0])):   # both parents have the same number of genes   
-            r = random.randint(0,1)         # 50/50 chance to choose gene from parent
+        for i in range(len(parents[0][0])):     # both parents have the same number of genes   
+            r = random.randint(0,1)             # 50/50 chance to choose gene from parent
             if r == 0:
                 child.append(parents[0][0][i])
             else:
@@ -285,12 +322,11 @@ def GA(population_size:int, generations:int, mutation_rate:float, crossover_rate
     population_1 = generate_population(population_size)
     for i in range(1, generations):
         population_1 = tournament_select(population_1)
-        population_1 = reproduce(crossover_rate, 1, population_1)
-        population_1 = mutate(mutation_rate, population_1, i)
-
+        population_1 = reproduce(crossover_rate, 1, mutation_rate, population_1)
 
         population_1.sort(key=lambda k: k[1], reverse=True)
         print(f'generation: {i} fittest: {population_1[0][1]}, {population_1[1][1]}, {population_1[2][1]}')
+        if population_1[0][1] == 1.0: break
 
     population_1.sort(key=lambda k: k[1], reverse=True)
     
@@ -310,23 +346,14 @@ def GA(population_size:int, generations:int, mutation_rate:float, crossover_rate
         sum = c[1] + sum
 
     print(f'The average fitness is: {sum / len(population_1)}')
+
     print(f'The best fitness is: {population_1[0][1]}')
-    return population_1[0]
+    return population_1[0]      # the top chromosome
 
 if __name__ == "__main__":
     DATA = read_all()
+    
 
-    top_fitnesses = []
     for i in range(5):
-        top_fitnesses.append(GA(8000, 75, 0.00, 1)[1])
-    # print('pop: 4000 gen: 500 mutation rate: 0.1 crossover rate: 0.9')
-    print(top_fitnesses)
-
-    # print(f'{GA(4000, 50, 0.00, 0.9)[1]}')
-
-#     test = [[0, 1, 18], [1, 0, 15], [2, 2, 14], [3, 0, 14], [4, 1, 3], [5, 0, 14], [6, 1, 12], [7, 1, 16], [8, 0, 9], [9, 1, 15], [10, 1, 14], [11, 0, 2], [12, 0, 14], [13, 0, 14], [14, 1, 6], [15, 1, 0], [16, 0, 15], [17, 1, 14], [18, 0, 10], [19, 0, 4], [20, 0, 19], [21, 0, 8], [22, 0, 11], [23, 0, 
-# 14], [24, 0, 0]]
-    
-#     print(evaluate_fitness(test))
-    
+        print_chromosome(GA(4000, 150, 0.05, 0.9)[0])
     
