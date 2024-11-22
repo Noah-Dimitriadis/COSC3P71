@@ -2,6 +2,7 @@ import easygui as gui
 import random
 from pprint import pprint
 from copy import deepcopy
+from datetime import datetime
 
 '''
 TODO actual GA function that does all the parts (once everything works individually)
@@ -213,10 +214,10 @@ def tournament_select(population:list[list[list]]) -> list[list[list]]:
 
 def reproduce(crossover_rate:float, crossover_method:int, mutation_rate:float, population:list[list[list]]) -> list[list[list]]:
     # TODO choose crossover method based on param
-    # TODO FIX ELITISM
+    
     # get elites
     population.sort(key=lambda k: k[1], reverse=True)
-    num_elites = int(0.05 * len(population))            # top 10%
+    num_elites = int(0.01 * len(population))            # top 10%
 
     # number of chromosomes we want to crossover
     num_crossover = int(crossover_rate * len(population)) - num_elites
@@ -270,14 +271,14 @@ def mutate_random(chromosome:list[list[list]]) -> list[list[list]]:
     return chromosome
 
 def mutate_top_50(chromosome:list[list[list]], population:list[list[list[list]]]) -> list[list[list]]:
-    # allele_to_mutate = random.randint(0, 2)
+    allele_to_mutate = random.randint(0, 2)
     num_genes_mutated = random.randint(1, 2)
-    allele_to_mutate = 1
+
     if allele_to_mutate == 0:
         for i in range(num_genes_mutated):
             gene = random.choice(chromosome)
 
-            top_choice = random.randint(0, int(len(population)/2))
+            top_choice = random.randint(0, int(len(population)/4))
             top_gene = random.choice(population[top_choice][0])
 
             gene[1] = top_gene[1]
@@ -318,8 +319,10 @@ def uniform_crossover(parents:list[list[list]]) -> list[list[list]]:
 
     return offspring
     
-def GA(population_size:int, generations:int, mutation_rate:float, crossover_rate:float) -> float:
+def GA(population_size:int, generations:int, mutation_rate:float, crossover_rate:float, output) -> float:
     # TODO add elitism parameter
+    # output = open("results.txt", 'a')
+
     population_1 = generate_population(population_size)
     for i in range(1, generations):
         population_1 = tournament_select(population_1)
@@ -327,7 +330,10 @@ def GA(population_size:int, generations:int, mutation_rate:float, crossover_rate
 
         population_1.sort(key=lambda k: k[1], reverse=True)
         print(f'generation: {i} fittest: {population_1[0][1]}, {population_1[1][1]}, {population_1[2][1]}')
-        if population_1[0][1] == 1.0: break
+        if population_1[0][1] == 1.0: 
+            output.write(f'generation: {i} fittest: {population_1[0][1]}, {population_1[1][1]}, {population_1[2][1]}\n')
+            break
+
 
     population_1.sort(key=lambda k: k[1], reverse=True)
     
@@ -349,12 +355,49 @@ def GA(population_size:int, generations:int, mutation_rate:float, crossover_rate
     print(f'The average fitness is: {sum / len(population_1)}')
 
     print(f'The best fitness is: {population_1[0][1]}')
+    print_chromosome(population_1[0][0])
+    
+    output.write(f'The average fitness is: {sum / len(population_1)}\n')
+    output.write(f'The best fitness is: {population_1[0][1]}\n')
+    output.write(f'Fitness spread:\n')
+
+    for d in duplicates:
+        output.write(f'{d}\n')
+
+    # for gene in population_1[0][0]:
+    #     output.write(f'{DATA['courses'][gene[0]]}:{DATA['rooms'][gene[1]]}:{DATA['timeslots'][gene[2]]}\n')
+
+    # output.write(f'{population_1[0][0]}\n')
+    output.write('\n')
     return population_1[0]      # the top chromosome
 
 if __name__ == "__main__":
-    DATA = read_all()
+    now = datetime.now()
+    date = str(now.date())
+    time = now.hour
     
+    DATA = read_all()
+    output = open(f'results_{date}_{time}.txt', 'a')
+    
+    for i in range(5):
+        GA(5000, 500, 0.05, 0.9, output)
+
+    output.write('Parameters: 5000, 500, 0.05, 0.9')
 
     for i in range(5):
-        print_chromosome(GA(4000, 150, 0.05, 0.9)[0])
+        GA(5000, 500, 0.05, 1, output)
+
+    output.write('Parameters: 5000, 500, 0.05, 1')
+
+    for i in range(5):
+        GA(5000, 500, 0.1, 1, output) 
+
+    output.write('Parameters: 5000, 500, 0.1, 1')
+    
+    for i in range(5):
+        GA(5000, 500, 0, 1, output)
+
+    output.write('Parameters: 5000, 500, 0, 1')
+
+    output.close()
     
