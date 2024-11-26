@@ -2,15 +2,6 @@ import easygui as gui
 import random
 from pprint import pprint
 from copy import deepcopy
-from datetime import datetime
-
-'''
-TODO write results to output file
-TODO remove break upon first solution
-TODO create population with predetermined seeds
-TODO write to csv file 
-TODO generate graphs
-'''
 
 DATA = dict()
 # no_conflicts = [[0, 1, 0], [1, 0, 10], [2, 3, 5], [3, 0, 8], [4, 1, 15], [5, 0, 0], [6, 1, 2], [7, 1, 3], [8, 1, 17], [9, 1, 7], [10, 1, 13], [11, 0, 7], [12, 0, 6], [13, 0, 19], [14, 1, 20], [15, 1, 6], [16, 0, 2], [17, 3, 10], [18, 0, 4], [19, 0, 13], [20, 0, 16], [21, 1, 19], [22, 0, 17], [23, 0, 18], [24, 1, 9]]
@@ -67,7 +58,8 @@ def read_all() -> dict:
     data.update({'days':all_days})
     return data
 
-def generate_population(size:int) -> list[list[list]]:
+def generate_population(size:int, seed) -> list[list[list]]:
+    random.seed(seed)
     population = []
     courses = DATA['courses']
     for i in range(size):
@@ -206,12 +198,12 @@ def tournament_select(population:list[list[list]]) -> list[list[list]]:
 
     return fit
 
-def reproduce(crossover_rate:float, crossover_method:int, mutation_rate:float, population:list[list[list]]) -> list[list[list]]:
+def reproduce(crossover_rate:float, crossover_method:int, mutation_rate:float, elitism_rate:float, population:list[list[list]]) -> list[list[list]]:
     # TODO choose crossover method based on param
     
     # get elites
     population.sort(key=lambda k: k[1], reverse=True)
-    num_elites = int(0.01 * len(population))            # top 10% TODO make this number a parameter
+    num_elites = int(elitism_rate * len(population))            # top %
 
     # number of chromosomes we want to crossover
     num_crossover = int(crossover_rate * len(population)) - num_elites
@@ -235,7 +227,7 @@ def reproduce(crossover_rate:float, crossover_method:int, mutation_rate:float, p
 
     num_mutated = int(mutation_rate * len(population))
     for i in range(num_mutated):
-        choice = random.randint(0,1)
+        choice = random.randint(0,1)        # choose between a random mutation or taking a gene from a chromosome in the top 50% 
         if choice == 0:
             chromosome = mutate_top_50(random.choice(population)[0], population)
         else:
@@ -313,21 +305,17 @@ def uniform_crossover(parents:list[list[list]]) -> list[list[list]]:
 
     return offspring
     
-def GA(population_size:int, generations:int, mutation_rate:float, crossover_rate:float, output) -> float:
-    # TODO add elitism parameter
-
-    population = generate_population(population_size)
+def GA(population_size:int, generations:int, crossover_rate:float, mutation_rate:float, elitism_rate:float, seed:int, output) -> float:
+    population = generate_population(population_size, seed)
     for i in range(1, generations):
         population = tournament_select(population)
-        population = reproduce(crossover_rate, 1, mutation_rate, population)
+        population = reproduce(crossover_rate, 1, mutation_rate, elitism_rate, population)
 
         population.sort(key=lambda k: k[1], reverse=True)
         print(f'generation: {i} fittest: {population[0][1]}, {population[1][1]}, {population[2][1]}')
-        if population[0][1] == 1.0: 
-            output.write(f'generation: {i} fittest: {population[0][1]}, {population[1][1]}, {population[2][1]}\n')
-            break
+        output.write(f'{i},{population[0][1]},{get_average_fitness(population)}\n')
 
-
+    
     population.sort(key=lambda k: k[1], reverse=True)     # sort by fitness
     
     d = 1       # there is always minimum 1 item
@@ -341,57 +329,59 @@ def GA(population_size:int, generations:int, mutation_rate:float, crossover_rate
     duplicates.append((population[i-1][1], d))
     
     pprint(duplicates)
-    sum = 0.0
-    for c in population:
-        sum = c[1] + sum
-
-    print(f'The average fitness is: {sum / len(population)}')
+    average = get_average_fitness(population)
+    print(f'The average fitness is: {average}')
 
     print(f'The best fitness is: {population[0][1]}')
     print_chromosome(population[0][0])
-    
-    output.write(f'The average fitness is: {sum / len(population)}\n')
-    output.write(f'The best fitness is: {population[0][1]}\n')
-    output.write(f'Fitness spread:\n')
 
-    for d in duplicates:
-        output.write(f'{d}\n')
-
-    # for gene in population[0][0]:
-    #     output.write(f'{DATA['courses'][gene[0]]}:{DATA['rooms'][gene[1]]}:{DATA['timeslots'][gene[2]]}\n')
-
-    # output.write(f'{population[0][0]}\n')
-
-    output.write('\n')
+    print('\n')
     return population[0]      # the top chromosome
 
+def get_average_fitness(population:list[list[list]]) -> float:
+    sum = 0.0
+    for c in population:
+        sum = c[1] + sum
+    return sum/(len(population))
+
 if __name__ == "__main__":
-    now = datetime.now()
-    date = str(now.date())
-    time = now.hour
-    
+    seeds = [43, 3, 77, 47, 8]
     DATA = read_all()
-    output = open(f'results_{date}_{time}.txt', 'a')
-    
-    for i in range(5): 
-        GA(5000, 500, 0.05, 0.9, output)
 
-    output.write('Parameters: 5000, 500, 0.05, 0.9')
+    # 10% elitism for all
 
+    # 1. Crossover rate = 100%, Mutation = 0%
+    output = open(f'results_100_0_t2.csv', 'a')
     for i in range(5):
-        GA(5000, 500, 0.05, 1, output)
+        output.write(f'Generation,Fittest,Average,{seeds[i]}\n')
+        GA(5000, 500, 1, 0, 0.1, seeds[i], output)
+    output.close()
 
-    output.write('Parameters: 5000, 500, 0.05, 1')
-
+    # 2. Crossover rate = 100%, Mutation = 10%
+    output = open(f'results_100_10_t2.csv', 'a')
     for i in range(5):
-        GA(5000, 500, 0.1, 1, output) 
+        output.write(f'Generation,Fittest,Average,{seeds[i]}\n')
+        GA(5000, 500, 1, 0.1, 0.1, seeds[i], output)
+    output.close()
 
-    output.write('Parameters: 5000, 500, 0.1, 1')
-    
+    # 3. Crossover rate = 90%, Mutation = 0%
+    output = open(f'results_90_0_t2.csv', 'a')
     for i in range(5):
-        GA(5000, 500, 0, 1, output)
+        output.write(f'Generation,Fittest,Average,{seeds[i]}\n')
+        GA(5000, 500, 0.9, 0, 0.1, seeds[i], output)
+    output.close()
 
-    output.write('Parameters: 5000, 500, 0, 1')
+    # 4. Crossover rate = 90%, Mutation = 10%
+    output = open(f'results_90_10_t2.csv', 'a')
+    for i in range(5):
+        output.write(f'Generation,Fittest,Average,{seeds[i]}\n')
+        GA(5000, 500, 0.9, 0.1, 0.1, seeds[i], output)
+    output.close()
 
+    # 5. My own best settings
+    output = open(f'results_90_5_t2.csv', 'a')
+    for i in range(5):
+        output.write(f'Generation,Fittest,Average,{seeds[i]}\n')
+        GA(5000, 500, 0.9, 0.05, 0.1, seeds[i], output)
     output.close()
     
