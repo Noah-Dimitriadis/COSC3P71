@@ -5,12 +5,9 @@ from copy import deepcopy
 from datetime import datetime
 
 '''
-TODO actual GA function that does all the parts (once everything works individually)
-
-TODO elite function - may require a redo of how the population is created, (dict or tuple)
-TODO remove elites from mutation
-TODO finish crossover function 
-TODO once GA function works, write results to output file
+TODO write results to output file
+TODO remove break upon first solution
+TODO create population with predetermined seeds
 '''
 
 DATA = dict()
@@ -123,7 +120,7 @@ def get_room_usages(chromosome:list[list]) -> list:
 
     return all_room_usages
 
-def get_professor_schedules(chromosome:list[list]):
+def get_professor_schedules(chromosome:list[list]) -> list:
     all_prof_schedules = []
     professors = DATA['professors']
 
@@ -166,8 +163,6 @@ def evaluate_fitness(chromosome:list[list]) -> float:
                 gene_day = DATA['timeslots'][gene[2]][0]
                 gene_start_time = int(DATA['timeslots'][gene[2]][1])
                 
-                # if gene_start_time >= end_time:
-                #     break                                           # room_usages is sorted by time so we can break when we start later then the current end_time
                 if gene_start_time >= start_time and gene_start_time < end_time and day == gene_day and gene[0] != booking[0]: # if the gene start time is inside the duration of the bookings time, the days are the same and the courses different
                         room_conflicts += 1
     
@@ -186,14 +181,11 @@ def evaluate_fitness(chromosome:list[list]) -> float:
                 gene_day = DATA['timeslots'][gene[2]][0]
                 gene_start_time = int(DATA['timeslots'][gene[2]][1])
                 
-                # if gene_start_time >= end_time:
-                #     break                                           # professor_schedules is sorted by time so we can break when we start later then the current end_time
                 if gene_start_time >= start_time and gene_start_time < end_time and day == gene_day and gene[0] != booking[0]: # if the gene start time is inside the duration of the bookings time, the days are the same and the courses different
                         prof_conflicts += 1 
 
     conflicts = capacity_conflicts + room_conflicts + prof_conflicts
     # print(f'capacity conflicts: {capacity_conflicts} room conflicts: {room_conflicts} prof conflicts: {prof_conflicts} total conflicts: {conflicts}')
-    # print(conflicts)
     return 1 / (1 + conflicts)
 
 def tournament_select(population:list[list[list]]) -> list[list[list]]:
@@ -217,7 +209,7 @@ def reproduce(crossover_rate:float, crossover_method:int, mutation_rate:float, p
     
     # get elites
     population.sort(key=lambda k: k[1], reverse=True)
-    num_elites = int(0.01 * len(population))            # top 10%
+    num_elites = int(0.01 * len(population))            # top 10% TODO make this number a parameter
 
     # number of chromosomes we want to crossover
     num_crossover = int(crossover_rate * len(population)) - num_elites
@@ -267,7 +259,7 @@ def mutate_random(chromosome:list[list[list]]) -> list[list[list]]:
             gene[1] = random.randrange(0, len(DATA['rooms']))
             gene[2] = random.randrange(0, len(DATA['timeslots']))
 
-    chromosome.sort(key= lambda k: k[0])
+    chromosome.sort(key= lambda k: k[0])        # sort the chromosome by the course
     return chromosome
 
 def mutate_top_50(chromosome:list[list[list]], population:list[list[list[list]]]) -> list[list[list]]:
@@ -278,7 +270,7 @@ def mutate_top_50(chromosome:list[list[list]], population:list[list[list[list]]]
         for i in range(num_genes_mutated):
             gene = random.choice(chromosome)
 
-            top_choice = random.randint(0, int(len(population)/4))
+            top_choice = random.randint(0, int(len(population)/2))
             top_gene = random.choice(population[top_choice][0])
 
             gene[1] = top_gene[1]
@@ -321,55 +313,55 @@ def uniform_crossover(parents:list[list[list]]) -> list[list[list]]:
     
 def GA(population_size:int, generations:int, mutation_rate:float, crossover_rate:float, output) -> float:
     # TODO add elitism parameter
-    # output = open("results.txt", 'a')
 
-    population_1 = generate_population(population_size)
+    population = generate_population(population_size)
     for i in range(1, generations):
-        population_1 = tournament_select(population_1)
-        population_1 = reproduce(crossover_rate, 1, mutation_rate, population_1)
+        population = tournament_select(population)
+        population = reproduce(crossover_rate, 1, mutation_rate, population)
 
-        population_1.sort(key=lambda k: k[1], reverse=True)
-        print(f'generation: {i} fittest: {population_1[0][1]}, {population_1[1][1]}, {population_1[2][1]}')
-        if population_1[0][1] == 1.0: 
-            output.write(f'generation: {i} fittest: {population_1[0][1]}, {population_1[1][1]}, {population_1[2][1]}\n')
+        population.sort(key=lambda k: k[1], reverse=True)
+        print(f'generation: {i} fittest: {population[0][1]}, {population[1][1]}, {population[2][1]}')
+        if population[0][1] == 1.0: 
+            output.write(f'generation: {i} fittest: {population[0][1]}, {population[1][1]}, {population[2][1]}\n')
             break
 
 
-    population_1.sort(key=lambda k: k[1], reverse=True)
+    population.sort(key=lambda k: k[1], reverse=True)     # sort by fitness
     
-    d = 1
+    d = 1       # there is always minimum 1 item
     duplicates = []
-    for i in range(1, len(population_1)):
-        if population_1[i][1] == population_1[i-1][1]:
+    for i in range(1, len(population)):
+        if population[i][1] == population[i-1][1]:
             d += 1
         else:
-            duplicates.append((population_1[i-1][1], d))
+            duplicates.append((population[i-1][1], d))
             d = 1
-    duplicates.append((population_1[i-1][1], d))
+    duplicates.append((population[i-1][1], d))
     
     pprint(duplicates)
     sum = 0.0
-    for c in population_1:
+    for c in population:
         sum = c[1] + sum
 
-    print(f'The average fitness is: {sum / len(population_1)}')
+    print(f'The average fitness is: {sum / len(population)}')
 
-    print(f'The best fitness is: {population_1[0][1]}')
-    print_chromosome(population_1[0][0])
+    print(f'The best fitness is: {population[0][1]}')
+    print_chromosome(population[0][0])
     
-    output.write(f'The average fitness is: {sum / len(population_1)}\n')
-    output.write(f'The best fitness is: {population_1[0][1]}\n')
+    output.write(f'The average fitness is: {sum / len(population)}\n')
+    output.write(f'The best fitness is: {population[0][1]}\n')
     output.write(f'Fitness spread:\n')
 
     for d in duplicates:
         output.write(f'{d}\n')
 
-    # for gene in population_1[0][0]:
+    # for gene in population[0][0]:
     #     output.write(f'{DATA['courses'][gene[0]]}:{DATA['rooms'][gene[1]]}:{DATA['timeslots'][gene[2]]}\n')
 
-    # output.write(f'{population_1[0][0]}\n')
+    # output.write(f'{population[0][0]}\n')
+
     output.write('\n')
-    return population_1[0]      # the top chromosome
+    return population[0]      # the top chromosome
 
 if __name__ == "__main__":
     now = datetime.now()
@@ -379,7 +371,7 @@ if __name__ == "__main__":
     DATA = read_all()
     output = open(f'results_{date}_{time}.txt', 'a')
     
-    for i in range(5):
+    for i in range(5): 
         GA(5000, 500, 0.05, 0.9, output)
 
     output.write('Parameters: 5000, 500, 0.05, 0.9')
