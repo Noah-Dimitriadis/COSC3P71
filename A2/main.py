@@ -8,6 +8,8 @@ from datetime import datetime
 TODO write results to output file
 TODO remove break upon first solution
 TODO create population with predetermined seeds
+TODO write to csv file 
+TODO generate graphs
 '''
 
 DATA = dict()
